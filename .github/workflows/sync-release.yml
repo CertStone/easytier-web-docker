@@ -1,0 +1,39 @@
+name: Sync EasyTier Release
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # 每天 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get latest EasyTier release
+        id: latest
+        run: |
+          TAG=$(curl -s https://api.github.com/repos/EasyTier/EasyTier/releases/latest | jq -r .tag_name)
+          echo "latest=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Read current version
+        id: current
+        run: |
+          CUR=$(cat VERSION)
+          echo "current=$CUR" >> $GITHUB_OUTPUT
+
+      - name: Update VERSION if needed
+        if: steps.latest.outputs.latest != steps.current.outputs.current
+        run: |
+          echo "${{ steps.latest.outputs.latest }}" > VERSION
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add VERSION
+          git commit -m "chore: bump EasyTier to ${{ steps.latest.outputs.latest }}"
+          git push
