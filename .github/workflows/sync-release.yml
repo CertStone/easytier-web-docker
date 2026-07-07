@@ -20,16 +20,23 @@ jobs:
         id: latest
         run: |
           TAG=$(curl -s https://api.github.com/repos/EasyTier/EasyTier/releases/latest | jq -r .tag_name)
-          echo "latest=$TAG" >> $GITHUB_OUTPUT
+          if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+            echo "::warning::Got empty tag from GitHub API (rate-limited?), skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "latest=$TAG" >> $GITHUB_OUTPUT
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Read current version
+        if: steps.latest.outputs.skip != 'true'
         id: current
         run: |
           CUR=$(cat VERSION)
           echo "current=$CUR" >> $GITHUB_OUTPUT
 
       - name: Update VERSION if needed
-        if: steps.latest.outputs.latest != steps.current.outputs.current
+        if: steps.latest.outputs.skip != 'true' && steps.latest.outputs.latest != steps.current.outputs.current
         run: |
           echo "${{ steps.latest.outputs.latest }}" > VERSION
           git config user.name "github-actions"
