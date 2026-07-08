@@ -7,7 +7,9 @@ https://github.com/MajoSissi/easytier-docker
 
 由于原作者删掉了单Web控制台版镜像，所以有了本仓库~
 
-> 镜像内含 `easytier-web-embed`（前端 + 后端一体）.
+> 镜像内含 `easytier-web-embed`（前端 + 后端一体）。入口脚本把 `ET_*` 环境变量翻译为对应的 CLI 参数。
+>
+> ⚠️ **关于 `ET_*` 环境变量**：本文档的变量名与默认值参照上游 EasyTier 仓库 **main 分支源码**整理，但镜像实际运行的是 **release 二进制**（如 v2.6.4）。release 与 main 分支存在版本差异，部分参数/环境变量在对应 release 中可能尚未支持或 `env` feature 尚未启用（`--help` 中除 `OIDC_CLIENT_SECRET` 外均无 `[env: ...]` 标注，程序不读取这些 env）。本镜像由 `run_web.sh` 翻译层把 `ET_*` 传入对应 CLI 参数，使其在 release 二进制上也能生效。`OIDC_CLIENT_SECRET` 除外，由程序原生读取 env。
 
 ## 单 Web 控制台部署
 
@@ -65,8 +67,6 @@ services:
       # ─────────── 高级 ───────────
       # GeoIP2 数据库路径（内置仅含国家，可选填自定义库）
       # ET_GEOIP_DB: "/app/data/geoip.mmdb"
-      # 心跳 RPC 最短响应时间（毫秒，默认 0）
-      # ET_HEARTBEAT_MIN_RESPONSE_MS: "0"
       # 不运行 Web Dashboard（默认 false）
       # ET_NO_WEB: "false"
 
@@ -99,22 +99,21 @@ services:
 
 ### 环境变量参考
 
-镜像内 `easytier-web-embed` 通过 clap `env="..."` 直接读取下列变量（无需在启动脚本里再翻译）。
+下列 `ET_*` 环境变量由 `run_web.sh` 翻译层转换为对应 CLI 参数传入 `easytier-web-embed`。`OIDC_CLIENT_SECRET` 例外，由程序原生读取 env。
 
 #### 基础（embed / 非 embed 共有）
 
-| 环境变量 | 类型 | 默认 | 说明 |
-|---|---|---|---|
-| `ET_WEB_DB` | String | `et.db` | sqlite3 数据库路径 |
-| `ET_WEB_CONSOLE_LOG_LEVEL` | off/error/warn/info/debug/trace | — | 控制台日志级别 |
-| `ET_WEB_FILE_LOG_LEVEL` | off/error/warn/info/debug/trace | — | 文件日志级别 |
-| `ET_WEB_FILE_LOG_DIR` | String | 当前目录 | 日志文件目录 |
-| `ET_CONFIG_SERVER_PORT` | u16 | `22020` | 配置服务（RPC）端口 |
-| `ET_CONFIG_SERVER_PROTOCOL` | udp/tcp/ws | `udp` | 配置服务协议 |
-| `ET_API_SERVER_PORT` | u16 | `11211` | API 端口 |
-| `ET_API_SERVER_ADDR` | IpAddr | `0.0.0.0` | API 监听地址 |
-| `ET_GEOIP_DB` | String | 内置 | GeoIP2 数据库路径 |
-| `ET_HEARTBEAT_MIN_RESPONSE_MS` | u64 | `0` | 心跳最短响应时间（ms） |
+| 环境变量 | CLI 参数 | 类型 | 默认 | 说明 |
+|---|---|---|---|---|
+| `ET_WEB_DB` | `-d, --db` | String | `/app/data/et.db` | sqlite3 数据库路径 |
+| `ET_WEB_CONSOLE_LOG_LEVEL` | `--console-log-level` | trace/debug/info/warn/error | `warn` | 控制台日志级别 |
+| `ET_WEB_FILE_LOG_LEVEL` | `--file-log-level` | trace/debug/info/warn/error | `warn` | 文件日志级别 |
+| `ET_WEB_FILE_LOG_DIR` | `--file-log-dir` | String | `/app/data/logs` | 日志文件目录 |
+| `ET_CONFIG_SERVER_PORT` | `-c, --config-server-port` | u16 | `22020` | 配置服务（RPC）端口 |
+| `ET_CONFIG_SERVER_PROTOCOL` | `-p, --config-server-protocol` | udp/tcp/ws | `udp` | 配置服务协议 |
+| `ET_API_SERVER_PORT` | `-a, --api-server-port` | u16 | `11211` | API 端口 |
+| `ET_API_SERVER_ADDR` | `--api-server-addr` | IpAddr | `0.0.0.0` | API 监听地址 |
+| `ET_GEOIP_DB` | `--geoip-db` | String | 内置 | GeoIP2 数据库路径 |
 
 #### Web Dashboard（**仅 embed**）
 
@@ -134,23 +133,32 @@ services:
 
 #### Webhook / 内部鉴权
 
-| 环境变量 | 备注 | 说明 |
+| 环境变量 | CLI 参数 | 说明 |
 |---|---|---|
-| `ET_WEBHOOK_URL` | String | webhook 端点基址 |
-| `ET_WEBHOOK_SECRET` | **隐藏** | webhook 共享密钥 |
-| `ET_INTERNAL_AUTH_TOKEN` | **隐藏** | 绕过会话鉴权的 token |
-| `ET_WEB_INSTANCE_ID` | String | webhook 回调中的实例标识 |
-| `ET_WEB_INSTANCE_API_BASE_URL` | String | 本实例内部 REST API 基址 |
+| `ET_WEBHOOK_URL` | `--webhook-url` | webhook 端点基址 |
+| `ET_WEBHOOK_SECRET` | `--webhook-secret` | webhook 共享密钥（敏感） |
+| `ET_INTERNAL_AUTH_TOKEN` | `--internal-auth-token` | 绕过会话鉴权的 token（敏感） |
+| `ET_WEB_INSTANCE_ID` | `--web-instance-id` | webhook 回调中的实例标识 |
+| `ET_WEB_INSTANCE_API_BASE_URL` | `--web-instance-api-base-url` | 本实例内部 REST API 基址 |
 
 #### OIDC（部分）
 
-| 环境变量 | 备注 | 说明 |
-|---|---|---|
-| `OIDC_CLIENT_SECRET` | 无 `ET_` 前缀 | OIDC client secret |
-| `--oidc-*` 其余 | 仅命令行 | issuer / client-id / scopes / redirect-url 等不支持 env |
+| 环境变量 / 方式 | 说明 |
+|---|---|
+| `OIDC_CLIENT_SECRET` | 由程序原生读取 env（`--help` 中唯一带 `[env:]` 的参数），无需翻译 |
+| `--oidc-*` 其余 | issuer-url / client-id / scopes / redirect-url 等仅支持命令行，本镜像不通过 env 暴露 |
 
-> **为什么没有旧的 `WEB_PORT` / `WEB_API_PORT` / `WEB_LOG_LEVEL` 变量了？**
-> 旧版镜像用了一套自造的环境变量名做翻译层，与官方 `ET_*` 不兼容，且只暴露了 6 个参数。新版直接透传 clap 原生 `env="..."`，所有 20 个变量全部可用，与官方文档一致。
+> **关于旧的 `WEB_PORT` / `WEB_API_PORT` / `WEB_LOG_LEVEL` 变量**
+> 原作者的旧版镜像用了一套自造的环境变量名。此处统一改用 `ET_*` 命名（与官方文档一致），由 `run_web.sh` 翻译为对应 CLI 参数。迁移时按下表对应：
+>
+> | 旧变量 | 新变量 |
+> |---|---|
+> | `WEB_DEFAULT_API_HOST` | `ET_API_HOST` |
+> | `WEB_PORT` | `ET_WEB_SERVER_PORT` |
+> | `WEB_API_PORT` | `ET_API_SERVER_PORT` |
+> | `WEB_SERVER_PORT` | `ET_CONFIG_SERVER_PORT` |
+> | `WEB_SERVER_PROTOCOL` | `ET_CONFIG_SERVER_PROTOCOL` |
+> | `WEB_LOG_LEVEL` | `ET_WEB_CONSOLE_LOG_LEVEL` + `ET_WEB_FILE_LOG_LEVEL` |
 
 ## ~~完整版 ( Core组网 + Web控制台 )~~ 
 
