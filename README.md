@@ -7,9 +7,8 @@ https://github.com/MajoSissi/easytier-docker
 
 由于原作者删掉了单Web控制台版镜像，所以有了本仓库~
 
-> 镜像内含 `easytier-web-embed`（前端 + 后端一体）。入口脚本把 `ET_*` 环境变量翻译为对应的 CLI 参数。
->
-> ⚠️ **关于 `ET_*` 环境变量**：本文档的变量名与默认值参照上游 EasyTier 仓库 **main 分支源码**整理，但镜像实际运行的是 **release 二进制**（如 v2.6.4）。release 与 main 分支存在版本差异，部分参数/环境变量在对应 release 中可能尚未支持或 `env` feature 尚未启用（`--help` 中除 `OIDC_CLIENT_SECRET` 外均无 `[env: ...]` 标注，程序不读取这些 env）。本镜像由 `run_web.sh` 翻译层把 `ET_*` 传入对应 CLI 参数，使其在 release 二进制上也能生效。`OIDC_CLIENT_SECRET` 除外，由程序原生读取 env。
+> 镜像内含 `easytier-web-embed`（前端 + 后端一体）。
+
 
 ## 单 Web 控制台部署
 
@@ -98,6 +97,8 @@ services:
 ```
 
 ### 环境变量参考
+
+> ⚠️ **关于 `ET_*` 环境变量**：本文档的变量名与默认值参照上游 EasyTier 仓库 **main 分支源码**整理，但镜像实际运行的是 **release 二进制**（当前版本 v2.6.4）。release 与 main 分支存在版本差异，部分参数/环境变量在对应 release 中可能尚未支持或 `env` feature 尚未启用（`--help` 中除 `OIDC_CLIENT_SECRET` 外均无 `[env: ...]` 标注，程序不读取这些 env）。本镜像由 `run_web.sh` 翻译层把 `ET_*` 传入对应 CLI 参数，使其在 release 二进制上也能生效。`OIDC_CLIENT_SECRET` 除外，由程序原生读取 env。
 
 下列 `ET_*` 环境变量由 `run_web.sh` 翻译层转换为对应 CLI 参数传入 `easytier-web-embed`。`OIDC_CLIENT_SECRET` 例外，由程序原生读取 env。
 
